@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SL-SUCN Zero-Trust Cybersecurity & IAM Orchestrator</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Phosphor Icons CDN -->
+    <script src="https://unpkg.com/@phosphor-icons/web"></script>
+    <!-- Chart.js for real-time traffic & distribution visualization -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+    <!-- STREAMING_CHUNK:Initializing framework imports and layout settings... -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        cyber: {
+                            bg: '#14161E',         /* Deep matte-slate background */
+                            panel: '#1A1D26',      /* Low-glare slate panel containers */
+                            border: '#2E3440',     /* Desaturated dark slate borders */
+                            gridline: '#1E222A',   /* Quiet container background grids */
+                            textMain: '#E5E9F0',   /* Clear high-contrast bone white */
+                            textMuted: '#6D7480',  /* Silent slate grey */
+                            amberNeon: '#F59E0B',  /* Warning amber accent (quarantine/OIDC) */
+                            blueNeon: '#00E5FF',   /* Cybersecurity cyan telemetry channels */
+                            nominal: '#10B981',    /* Nominal green check state */
+                            anomaly: '#EF4444'     /* DDoS Mitigation/Firewall Red */
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+
+    <!-- STREAMING_CHUNK:Styling layout custom classes... -->
+    <style>
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: #14161E;
+        }
+
+        /* Ambient neon highlights */
+        .glow-amber {
+            box-shadow: 0 0 15px rgba(245, 158, 11, 0.15);
+            border-color: rgba(245, 158, 11, 0.4);
+        }
+        .glow-red {
+            box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
+            border-color: rgba(239, 68, 68, 0.4);
+        }
+        .glow-cyan {
+            box-shadow: 0 0 15px rgba(0, 229, 255, 0.15);
+            border-color: rgba(0, 229, 255, 0.3);
+        }
+
+        /* Minimal scrollbars */
+        ::-webkit-scrollbar {
+            width: 4px;
+            height: 4px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #14161E;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #2E3440;
+            border-radius: 2px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #F59E0B;
+        }
+    </style>
+</head>
+<body class="h-screen w-screen overflow-hidden flex flex-col text-cyber-textMain select-none antialiased">
+
+    <!-- HEADER UTILITY BAR (Global Context & Clearance Selection) -->
+    <header class="h-14 bg-cyber-panel border-b border-cyber-border flex items-center justify-between px-4 shrink-0 z-30 font-mono">
+        <div class="flex items-center gap-3">
+            <div class="w-8 h-8 rounded bg-[#1F232D] border border-cyber-border flex items-center justify-center text-cyber-amberNeon">
+                <i class="ph ph-shield-star text-xl animate-pulse"></i>
+            </div>
+            <div>
+                <div class="flex items-center gap-2">
+                    <span class="text-white font-bold text-sm tracking-widest uppercase">SL-SUCN Security Command</span>
+                    <span class="text-[9px] bg-amber-950/40 border border-amber-600/40 text-cyber-amberNeon px-1.5 py-0.5 rounded font-bold uppercase tracking-tight">
+                        ZERO_TRUST_ENFORCED
+                    </span>
+                </div>
+                <p class="text-[9px] text-cyber-textMuted uppercase tracking-widest leading-none">Identity & Cryptographic Orchestrator</p>
+            </div>
+        </div>
+
+        <!-- Global Performance Counters -->
+        <div class="hidden xl:flex items-center gap-6 text-xs">
+            <div class="flex items-center gap-2 bg-[#202430] border border-cyber-border px-3 py-1 rounded">
+                <i class="ph ph-key text-cyber-nominal text-lg"></i>
+                <div>
+                    <p class="text-[8px] text-cyber-textMuted uppercase leading-none">IAM Sessions</p>
+                    <p id="active-session-count" class="text-white font-bold mt-1 text-[11px]">1,420 Active</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 bg-[#202430] border border-cyber-border px-3 py-1 rounded">
+                <i class="ph ph-firewall text-cyber-anomaly text-lg"></i>
+                <div>
+                    <p class="text-[8px] text-cyber-textMuted uppercase leading-none">Threats Mitigated</p>
+                    <p id="mitigated-threats-24h" class="text-cyber-anomaly font-bold mt-1 text-[11px]">342 Blocks (24h)</p>
+                </div>
+            </div>
+
+            <div class="flex items-center gap-2 bg-[#202430] border border-cyber-border px-3 py-1 rounded">
+                <i class="ph ph-cpu text-cyber-blueNeon text-lg animate-pulse"></i>
+                <div>
+                    <p class="text-[8px] text-cyber-textMuted uppercase leading-none">mTLS Compliance</p>
+                    <p class="text-white font-bold mt-1 text-[11px]">99.8% Compliant</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- User Controls / Alarm Muter / Clearance Toggles -->
+        <div class="flex items-center gap-3">
+            <button id="alarm-toggle-btn" onclick="toggleAudioMute()" class="p-1.5 rounded bg-cyber-bg border border-cyber-border text-cyber-textMuted hover:text-white transition-colors" title="Toggle System Sirens">
+                <i id="alarm-icon" class="ph ph-speaker-slash text-base"></i>
+            </button>
+
+            <div class="h-6 w-[1px] bg-cyber-border"></div>
+
+            <div class="flex items-center gap-2 text-xs">
+                <span class="text-cyber-textMuted uppercase hidden sm:inline text-[10px]">Context Profile:</span>
+                <select id="operator-clearance" onchange="shiftClearance(this.value)" class="bg-[#202430] border border-cyber-border text-cyber-amberNeon rounded px-2.5 py-1 font-bold font-mono focus:outline-none cursor-pointer">
+                    <option value="LEVEL_3_SUPERVISOR">L3 SUPERVISOR (Write)</option>
+                    <option value="LEVEL_1_OPERATOR">L1 OPERATOR (Read-Only)</option>
+                </select>
+            </div>
+        </div>
+    </header>
+
+    <!-- STREAMING_CHUNK:Designing Top Ribbon Dashboard status stats... -->
+    <!-- MAIN GRID CONTAINER -->
+    <div class="flex-1 grid grid-cols-1 xl:grid-cols-12 min-h-0 overflow-y-auto xl:overflow-hidden p-4 gap-4">
+
+        <!-- LEFT PANEL: KEYCLOAK IDENTITY & RBAC AUDIT FEED (3 Columns) -->
+        <aside class="xl:col-span-3 bg-cyber-panel border border-cyber-border rounded-xl p-4 flex flex-col justify-between min-h-[400px] xl:min-h-0 font-mono">
+            <div class="flex flex-col h-full justify-between gap-4">
+                
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-cyber-border pb-2">
+                        <span class="text-xs font-bold text-white uppercase flex items-center gap-1.5">
+                            <i class="ph ph-users-three text-cyber-amberNeon"></i> Keycloak IAM Sessions
+                        </span>
+                        <span class="text-[9px] text-cyber-textMuted uppercase">OAuth2 OIDC</span>
+                    </div>
+
+                    <!-- Role Based Access Ring Chart -->
+                    <div class="bg-cyber-bg p-3 rounded-lg border border-cyber-border flex flex-col items-center">
+                        <span class="text-[9px] text-cyber-textMuted uppercase tracking-wider self-start mb-2">RBAC Class Spread</span>
+                        <div class="h-32 w-32 relative">
+                            <canvas id="rbacDistributionChart"></canvas>
+                        </div>
+                        <div class="grid grid-cols-2 gap-x-4 gap-y-1 text-[10px] w-full mt-3 border-t border-cyber-border/40 pt-2 text-cyber-textMuted">
+                            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded bg-amber-500 inline-block"></span> Admin: <strong class="text-white">3</strong></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded bg-cyan-400 inline-block"></span> Operator: <strong class="text-white">12</strong></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded bg-emerald-400 inline-block"></span> Tech: <strong class="text-white">45</strong></div>
+                            <div class="flex items-center gap-1.5"><span class="w-2 h-2 rounded bg-slate-500 inline-block"></span> Public: <strong class="text-white">1.3K</strong></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Live Keycloak Active Token Inspector -->
+                <div class="flex-1 flex flex-col min-h-[150px] mt-2">
+                    <div class="text-[9px] text-cyber-textMuted uppercase tracking-wider mb-2 flex justify-between">
+                        <span>Active Token Inspector</span>
+                        <span class="text-cyber-nominal flex items-center gap-1"><span class="w-1.5 h-1.5 rounded-full bg-cyber-nominal animate-ping"></span> Live Feed</span>
+                    </div>
+                    <div class="flex-1 overflow-y-auto bg-cyber-bg rounded-lg border border-cyber-border p-2.5 text-[10px] space-y-2">
+                        <div class="border-b border-cyber-border/40 pb-1.5">
+                            <div class="flex justify-between font-bold text-cyber-textMain mb-0.5">
+                                <span>USR-94821 [L3 Supervisor]</span>
+                                <span class="text-cyber-nominal">Active</span>
+                            </div>
+                            <p class="text-cyber-textMuted text-[9px]">Token Issued: Colombo Fort Control Node • TTL: 42m remaining</p>
+                        </div>
+                        <div class="border-b border-cyber-border/40 pb-1.5">
+                            <div class="flex justify-between font-bold text-cyber-textMain mb-0.5">
+                                <span>TECH-2041 [Field Tech]</span>
+                                <span class="text-cyber-nominal">Active</span>
+                            </div>
+                            <p class="text-cyber-textMuted text-[9px]">Token Issued: Port City Grid Gateway • TTL: 1h 12m remaining</p>
+                        </div>
+                        <div>
+                            <div class="flex justify-between font-bold text-cyber-textMain mb-0.5">
+                                <span>ANON-3912 [Citizen Public]</span>
+                                <span class="text-cyber-textMuted">Idle</span>
+                            </div>
+                            <p class="text-cyber-textMuted text-[9px]">Token Issued: Consumer Portal Hub • TTL: Expired (Session Closed)</p>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+        <!-- STREAMING_CHUNK:Developing Center Viewport Interactive Network Topology... -->
+        <!-- CENTER VIEWPORT: INTERACTIVE NETWORK TOPOLOGY (6 Columns) -->
+        <main class="xl:col-span-6 flex flex-col gap-4 min-h-[500px] xl:min-h-0 font-mono">
+            
+            <!-- Topological Mapping Dashboard View -->
+            <div class="flex-1 bg-cyber-panel border border-cyber-border rounded-xl p-4 flex flex-col relative overflow-hidden">
+                
+                <div class="flex justify-between items-center border-b border-cyber-border pb-2 shrink-0 z-10">
+                    <div>
+                        <span class="text-[8px] text-cyber-blueNeon font-bold uppercase tracking-widest block">Zero-Trust Network Mapping</span>
+                        <h2 class="text-xs font-bold text-white uppercase flex items-center gap-1.5">
+                            <i class="ph ph-circles-three text-cyber-blueNeon animate-spin" style="animation-duration: 8s"></i> Dynamic mTLS Topology Graph
+                        </h2>
+                    </div>
+                    <span class="text-[9px] text-cyber-textMuted uppercase bg-cyber-bg border border-cyber-border px-1.5 py-0.5 rounded">
+                        250 Monitored Nodes
+                    </span>
+                </div>
+
+                <!-- Custom Interactive SVG Topology Graph -->
+                <div class="flex-1 relative flex items-center justify-center min-h-[260px]">
+                    
+                    <!-- Tech Grid Background -->
+                    <div class="absolute inset-0 pointer-events-none opacity-[0.03]" 
+                        style="background-image: radial-gradient(circle, #fff 1px, transparent 1px); background-size: 20px 20px;">
+                    </div>
+
+                    <svg class="w-full h-full absolute inset-0 select-none pointer-events-auto" viewBox="0 0 500 350">
+                        <!-- Connection Links (Faint Gray Geometric Vectors) -->
+                        <line x1="250" y1="175" x2="130" y2="90" stroke="#2E3440" stroke-width="1.5" />
+                        <line x1="250" y1="175" x2="370" y2="90" stroke="#2E3440" stroke-width="1.5" />
+                        <line x1="250" y1="175" x2="250" y2="280" stroke="#2E3440" stroke-width="1.5" />
+                        <line x1="130" y1="90" x2="70" y2="200" stroke="#2E3440" stroke-dasharray="3,3" stroke-width="1.2" />
+                        <line x1="370" y1="90" x2="430" y2="200" stroke="#2E3440" stroke-dasharray="3,3" stroke-width="1.2" />
+                        
+                        <!-- Quarantined Segment Link: Highlighted animated dotted vector -->
+                        <line x1="250" y1="280" x2="380" y2="280" stroke="#F59E0B" stroke-dasharray="5,4" stroke-width="2" class="animate-[dash_1s_linear_infinite]" id="quarantined-link">
+                            <animate attributeName="stroke-dashoffset" values="20;0" dur="1s" repeatCount="indefinite" />
+                        </line>
+
+                        <!-- Central Cloud Identity Core Node -->
+                        <g class="cursor-pointer" onclick="inspectNode('CLOUD_CORE')">
+                            <circle cx="250" cy="175" r="14" class="fill-[#1A1D26] stroke-cyber-blueNeon stroke-2 glow-cyan" />
+                            <circle cx="250" cy="175" r="5" class="fill-cyber-blueNeon" />
+                            <text x="250" y="200" text-anchor="middle" class="fill-cyber-textMain text-[9px] font-bold">Cloud Core (Keycloak)</text>
+                        </g>
+
+                        <!-- Edge Gateway East Node -->
+                        <g class="cursor-pointer" onclick="inspectNode('GW_EAST')">
+                            <circle cx="130" cy="90" r="10" class="fill-[#1A1D26] stroke-cyber-nominal stroke-2" />
+                            <circle cx="130" cy="90" r="4" class="fill-cyber-nominal" />
+                            <text x="130" y="75" text-anchor="middle" class="fill-cyber-textMuted text-[8px]">GW-EAST-01</text>
+                        </g>
+
+                        <!-- Edge Gateway West Node -->
+                        <g class="cursor-pointer" onclick="inspectNode('GW_WEST')">
+                            <circle cx="370" cy="90" r="10" class="fill-[#1A1D26] stroke-cyber-nominal stroke-2" />
+                            <circle cx="370" cy="90" r="4" class="fill-cyber-nominal" />
+                            <text x="370" y="75" text-anchor="middle" class="fill-cyber-textMuted text-[8px]">GW-WEST-02</text>
+                        </g>
+
+                        <!-- Desalination Core Concentrator Node -->
+                        <g class="cursor-pointer" onclick="inspectNode('DESAL_CONC')">
+                            <circle cx="250" cy="280" r="10" class="fill-[#1A1D26] stroke-cyber-nominal stroke-2" />
+                            <circle cx="250" cy="280" r="4" class="fill-cyber-nominal" />
+                            <text x="250" y="300" text-anchor="middle" class="fill-cyber-textMuted text-[8px]">DESAL-CONC-03</text>
+                        </g>
+
+                        <!-- QUARANTINED EXPIRED CERTIFICATE NODE (Highlighted Warning Amber) -->
+                        <g id="quarantine-node" class="cursor-pointer" onclick="inspectNode('GW_QUARANTINED')">
+                            <!-- Alert ring pulsing -->
+                            <circle cx="380" cy="280" r="16" class="fill-transparent stroke-cyber-amberNeon stroke-2 opacity-60 animate-ping" />
+                            <circle cx="380" cy="280" r="11" class="fill-[#1A1D26] stroke-cyber-amberNeon stroke-2 glow-amber" />
+                            <circle cx="380" cy="280" r="4.5" class="fill-cyber-amberNeon" />
+                            <text x="380" y="302" text-anchor="middle" class="fill-cyber-amberNeon text-[9px] font-bold">GW-EDGE-DESAL-04</text>
+                        </g>
+                    </svg>
+
+                    <!-- Embedded Map Legend Overlay -->
+                    <div class="absolute bottom-3 left-3 bg-cyber-bg/90 border border-cyber-border p-2 rounded text-[8px] text-cyber-textMuted space-y-1 z-10">
+                        <div class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-cyber-blueNeon inline-block"></span> Identity Provider</div>
+                        <div class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-cyber-nominal inline-block"></span> mTLS Verified Gateway</div>
+                        <div class="flex items-center gap-1.5"><span class="w-1.5 h-1.5 rounded-full bg-cyber-amberNeon animate-pulse inline-block"></span> Quarantined / Expired Cert</div>
+                    </div>
+                </div>
+
+                <!-- Floating Cryptographic Edge Inspector Panel -->
+                <div id="topology-inspector" class="bg-cyber-bg/95 border border-cyber-border rounded-lg p-3 relative mt-2 z-10 transition-all duration-300">
+                    <div class="flex justify-between items-start mb-2 pb-1.5 border-b border-cyber-border/40">
+                        <div>
+                            <span class="text-[8px] text-cyber-amberNeon font-bold uppercase tracking-widest block">Isolated Device Inspector</span>
+                            <h4 id="inspect-node-id" class="text-xs text-white font-bold font-mono">GW-EDGE-DESAL-04</h4>
+                        </div>
+                        <span id="inspect-compliance-badge" class="text-[8px] bg-amber-500/15 border border-amber-500/30 text-cyber-amberNeon font-bold px-1.5 py-0.5 rounded font-mono uppercase">
+                            CERTIFICATE_EXPIRED
+                        </span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-[10px] font-mono">
+                        <div>
+                            <span class="text-cyber-textMuted uppercase block text-[8px]">Deployment Sector</span>
+                            <span id="inspect-node-location" class="text-white font-semibold">Floating Desal Plant Stage 2</span>
+                        </div>
+                        <div>
+                            <span class="text-cyber-textMuted uppercase block text-[8px]">Security Profile</span>
+                            <span class="text-cyber-blueNeon font-semibold">mTLS (X.509 RSA)</span>
+                        </div>
+                        <div>
+                            <span class="text-cyber-textMuted uppercase block text-[8px]">HSM Crypto State</span>
+                            <span id="inspect-hsm-state" class="text-cyber-nominal font-semibold flex items-center gap-1">
+                                <i class="ph ph-shield-check"></i> SECURE_TAMPER_FREE
+                            </span>
+                        </div>
+                        <div>
+                            <span class="text-cyber-textMuted uppercase block text-[8px]">Quarantine Routine</span>
+                            <span id="inspect-quarantine-status" class="text-cyber-amberNeon font-bold flex items-center gap-1 animate-pulse">
+                                <i class="ph ph-keyhole"></i> ACTIVE_ISOLATION
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </main>
+
+        <!-- STREAMING_CHUNK:Constructing Right Panel API Gateways and DDoS Mitigation... -->
+        <!-- RIGHT PANEL: API GATEWAY & FIREWALL OVERRIDE MATRIX (3 Columns) -->
+        <aside class="xl:col-span-3 bg-cyber-panel border border-cyber-border rounded-xl p-4 flex flex-col justify-between min-h-[450px] xl:min-h-0 font-mono">
+            <div class="flex flex-col h-full justify-between gap-4">
+                
+                <div class="space-y-4">
+                    <div class="flex justify-between items-center border-b border-cyber-border pb-2">
+                        <span class="text-xs font-bold text-white uppercase flex items-center gap-1.5">
+                            <i class="ph ph-flow-arrow text-cyber-blueNeon"></i> API Gateway Performance
+                        </span>
+                        <span class="text-[9px] text-cyber-textMuted">Kong Gateway</span>
+                    </div>
+
+                    <!-- Flow Velocity Chart -->
+                    <div class="bg-cyber-bg p-3 rounded-lg border border-cyber-border relative">
+                        <div class="flex justify-between text-[9px] text-cyber-textMuted mb-2">
+                            <span>Request Velocity ($R_s$)</span>
+                            <span id="throughput-val-display" class="text-cyber-blueNeon font-bold">412.5 Req/s</span>
+                        </div>
+                        <div class="h-24 w-full">
+                            <canvas id="apiThroughputChart"></canvas>
+                        </div>
+                    </div>
+
+                    <!-- Active DDoS Mitigated Vector Alerts (Red Banners) -->
+                    <div class="bg-red-950/10 border border-cyber-anomaly/30 rounded-lg p-3 space-y-2 glow-red relative overflow-hidden">
+                        <div class="absolute left-0 top-0 bottom-0 w-1 bg-cyber-anomaly animate-pulse"></div>
+                        <div class="flex justify-between items-center text-[10px] text-cyber-anomaly font-bold uppercase">
+                            <span class="flex items-center gap-1.5">
+                                <i class="ph ph-shield-warning animate-bounce"></i> ACTIVE_BLOCK_MUTING
+                            </span>
+                            <span>BLK-9082</span>
+                        </div>
+                        <p class="text-[10px] text-gray-300 leading-normal">
+                            Target Endpoint: <code class="text-white bg-[#2A1115] px-1 rounded">/api/v1/consumer/metrics</code> <br>
+                            Cause: <strong class="text-white">Rate limit exceeded (&gt; 60 req/min per IP)</strong>
+                        </p>
+                        <div class="flex justify-between text-[9px] text-cyber-textMuted pt-1.5 border-t border-cyber-anomaly/20">
+                            <span>Muted Client IP: <strong class="text-white">192.168.xx.xx</strong></span>
+                            <span class="text-cyber-anomaly font-bold">300s Remaining</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Emergency Global Revocation Lock Control Panel -->
+                <div class="bg-cyber-bg p-3 rounded-xl border border-cyber-border space-y-3 mt-2">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="text-[9px] text-cyber-anomaly font-bold uppercase tracking-widest block">Core Security Breach Killswitch</span>
+                            <h4 class="text-xs text-white font-bold">Global Session Revocation</h4>
+                            <p class="text-[9px] text-cyber-textMuted mt-1 leading-normal">Immediately invalidate all active OpenID Connect tokens outside localized supervisor centers.</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between bg-red-950/15 border border-cyber-anomaly/30 p-2.5 rounded-lg">
+                        <span class="text-[9px] text-cyber-anomaly font-bold uppercase flex items-center gap-1">
+                            <i class="ph ph-warning"></i> MASTER override lock
+                        </span>
+                        <!-- Custom styled secure checkbox toggle representing the Killswitch -->
+                        <button id="master-kill-btn" onclick="initiateKillswitch()" class="bg-cyber-anomaly/10 hover:bg-cyber-anomaly/25 border border-cyber-anomaly text-cyber-anomaly text-[10px] font-bold px-3 py-1.5 rounded transition-all">
+                            DEPLOY SWIFT REVOCATION
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+        </aside>
+
+    </div>
+
+    <!-- STREAMING_CHUNK:Creating Bottom Row Incident Mitigation Log Ticker... -->
+    <!-- BOTTOM ROW: INCIDENT MITIGATION LOG TICKER -->
+    <footer class="h-16 bg-cyber-panel border-t border-cyber-border px-4 py-2 flex items-center justify-between shrink-0 font-mono text-[10px]">
+        <div class="flex items-center gap-2 shrink-0 border-r border-cyber-border pr-4 h-full text-cyber-textMuted">
+            <i class="ph ph-terminal text-lg text-cyber-amberNeon"></i>
+            <div>
+                <span class="font-bold text-white uppercase block text-[9px]">Security Terminal Log</span>
+                <span>Sub-Second Repaint Audit</span>
+            </div>
+        </div>
+
+        <!-- Scrolling Ticker Container -->
+        <div class="flex-1 overflow-hidden px-4">
+            <div id="terminal-ticker-feed" class="flex flex-col gap-1 text-[9px] h-full justify-center text-cyber-textMuted scroll-smooth">
+                <!-- Live logs are pre-populated & appended via JavaScript dynamically -->
+                <p><span class="text-cyber-amberNeon font-bold">[14:15:00]</span> KEYCLOAK OIDC: Token issued USR-94821 over sector Colombo Fort.</p>
+                <p><span class="text-cyber-blueNeon font-bold">[14:13:42]</span> mTLS X509: Initiating cryptographic handshake for edge node DESAL-CONC-03.</p>
+            </div>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0 border-l border-cyber-border pl-4 h-full text-right text-[9px]">
+            <div>
+                <p class="text-white font-bold uppercase text-[8px]">Zero-Trust Engine State</p>
+                <p class="text-cyber-nominal flex items-center gap-1 justify-end font-bold uppercase">
+                    <span class="w-1.5 h-1.5 rounded-full bg-cyber-nominal inline-block"></span> Active Compliance
+                </p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- STREAMING_CHUNK:Implementing Security Modals and Authorization Prompts... -->
+    <!-- SECURE DUAL-AUTHORIZATION VALIDATION DIALOG MODAL -->
+    <div id="dual-auth-modal" class="fixed inset-0 bg-black/85 backdrop-blur-sm z-50 flex items-center justify-center p-4 hidden font-mono">
+        <div class="bg-cyber-panel border border-[#3e4554] rounded-2xl max-w-md w-full p-6 shadow-[0_0_50px_rgba(0,0,0,0.85)] relative overflow-hidden">
+            
+            <div class="absolute right-0 top-0 opacity-[0.02] text-cyber-amberNeon">
+                <i class="ph ph-shield-warning text-[240px] -mr-16 -mt-16"></i>
+            </div>
+
+            <div class="flex items-center gap-3 pb-3 border-b border-cyber-border mb-4 text-cyber-amberNeon">
+                <i class="ph ph-lock-key text-2xl animate-pulse"></i>
+                <div>
+                    <h3 class="text-sm font-bold text-white uppercase tracking-wider">DUAL-AUTHORIZATION POLICY GATEWAY</h3>
+                    <p class="text-[9px] text-cyber-textMuted uppercase tracking-tight">Requires Multiple Administrator Signature Validation</p>
+                </div>
+            </div>
+
+            <div class="space-y-4 text-xs">
+                
+                <!-- Action payload breakdown card -->
+                <div class="bg-cyber-bg p-3 rounded-lg border border-cyber-border text-cyber-textMuted leading-normal space-y-1 text-[11px]">
+                    <p class="font-bold text-cyber-blueNeon mb-2 uppercase text-[9px] tracking-wider">Proposed Policy Mutation:</p>
+                    <p>TRANSACTION: <span id="modal-policy-id" class="text-white font-bold">POL-4921</span></p>
+                    <p>TARGET DEVICE: <span id="modal-policy-device" class="text-white font-bold">GW-EDGE-DESAL-04</span></p>
+                    <p>ACTION ACTION: <span id="modal-policy-action" class="text-cyber-amberNeon font-bold">MUTATION_MTLS_TRUST_BYPASS</span></p>
+                    
+                    <p class="text-cyber-textMuted text-[9px] pt-2 border-t border-cyber-border mt-2 leading-relaxed">
+                        WARNING: Force-revoking or bypassing edge cryptographic validation states exposes decentralized sensor loops. This action requires authorization validation tokens from two active administrators.
+                    </p>
+                </div>
+
+                <!-- Input code arrays representing Multi-Factor Admin Keys -->
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="text-[9px] text-cyber-textMuted font-bold uppercase block tracking-wider mb-1">Admin Token 1:</label>
+                        <input id="admin-token-1" type="password" placeholder="••••" class="w-full bg-cyber-bg border border-cyber-border text-center text-sm text-white font-bold py-1.5 rounded focus:outline-none focus:border-cyber-blueNeon tracking-widest">
+                    </div>
+                    <div>
+                        <label class="text-[9px] text-cyber-textMuted font-bold uppercase block tracking-wider mb-1">Admin Token 2:</label>
+                        <input id="admin-token-2" type="password" placeholder="••••" class="w-full bg-cyber-bg border border-cyber-border text-center text-sm text-white font-bold py-1.5 rounded focus:outline-none focus:border-cyber-blueNeon tracking-widest">
+                    </div>
+                </div>
+
+                <!-- Live validation error indicator -->
+                <p id="modal-auth-error" class="text-[10px] text-cyber-anomaly font-bold text-center hidden pt-1 bg-red-950/20 border border-red-900/30 py-1 rounded"></p>
+
+                <p class="text-[9px] text-cyber-textMuted text-center uppercase tracking-tighter">
+                    (Standard Operations demo pass validation pins are <strong class="text-cyber-amberNeon">1111</strong> and <strong class="text-cyber-amberNeon">2222</strong>)
+                </p>
+
+                <!-- Action buttons -->
+                <div class="flex gap-3 pt-2">
+                    <button onclick="closeSecureModal()" class="flex-1 bg-[#202533] hover:bg-[#2b3346] text-cyber-textMuted hover:text-white font-bold py-2.5 rounded text-xs transition-colors border border-cyber-border">
+                        ABORT CONFIGURATION
+                    </button>
+                    <button id="modal-dispatch-btn" onclick="executeAuthorizedPolicy()" class="flex-1 bg-cyber-amberNeon hover:bg-amber-400 text-[#14161E] font-extrabold py-2.5 rounded text-xs transition-colors shadow-lg shadow-amber-500/10">
+                        MUTATE SECURITY FRAMEWORK
+                    </button>
+                </div>
+
+            </div>
+
+        </div>
+    </div>
+
+    <!-- CORE INTERACTION SCRIPTS -->
+    <!-- /* STREAMING_CHUNK:Initializing state variables and data... */ -->
+    <script>
+        // Centralized security control state mapping parameters
+        let state = {
+            clearance_level: "LEVEL_3_SUPERVISOR",
+            threats_blocked_24h: 342,
+            active_sessions: 1420,
+            audio_muted: true,
+            selected_node: 'GW_QUARANTINED',
+            logs: [
+                "KEYCLOAK OIDC: Token issued USR-94821 over sector Colombo Fort.",
+                "mTLS X509: Initiating cryptographic handshake for edge node DESAL-CONC-03.",
+                "FIREWALL: Blocked inbound packet from blacklisted port 8080 targeting /metrics.",
+                "KEYCLOAK OIDC: Active Session USR-94821 verified clearance LEVEL_3_SUPERVISOR.",
+                "mTLS X509: WARNING - Node GW-EDGE-DESAL-04 handshake failed. Handshake status: CERTIFICATE_EXPIRED.",
+                "SECURITY CORE: Auto quarantine policy deployed on node GW-EDGE-DESAL-04."
+            ],
+            // Map details representing the nodes on our topological grid
+            nodes: {
+                'CLOUD_CORE': {
+                    id: 'CLOUD-IDENTITY-CORE (Keycloak)',
+                    location: 'Colombo Central Core Array',
+                    status_badge: 'ZERO_TRUST_ENFORCED',
+                    hsm_status: 'HSM_INTEGRITY_VERIFIED',
+                    state_desc: 'Central authorization broker managing active sessions across all municipal networks.'
+                },
+                'GW_EAST': {
+                    id: 'GW-EAST-01',
+                    location: 'Colombo Port Logistics Sector',
+                    status_badge: 'verified_mTLS_COMPLIANT',
+                    hsm_status: 'HSM_INTEGRITY_VERIFIED',
+                    state_desc: 'Edge router forwarding traffic to Port City wind energy grid clusters.'
+                },
+                'GW_WEST': {
+                    id: 'GW-WEST-02',
+                    location: 'Galle Face Microclimate Corridor',
+                    status_badge: 'verified_mTLS_COMPLIANT',
+                    hsm_status: 'HSM_INTEGRITY_VERIFIED',
+                    state_desc: 'Handles smart hydration system proximity sensor data.'
+                },
+                'DESAL_CONC': {
+                    id: 'DESAL-CONC-03',
+                    location: 'South Beach Filtration Yard',
+                    status_badge: 'verified_mTLS_COMPLIANT',
+                    hsm_status: 'HSM_INTEGRITY_VERIFIED',
+                    state_desc: 'Secondary concentrator processing multi-stage pressure differential sensors.'
+                },
+                'GW_QUARANTINED': {
+                    id: 'GW-EDGE-DESAL-04',
+                    location: 'Floating Desal Plant Stage 2',
+                    status_badge: 'CERTIFICATE_EXPIRED',
+                    hsm_status: 'SECURE_TAMPER_FREE',
+                    state_desc: 'Asset isolated on the network. mTLS certificate expired 14 minutes ago. Needs administrative re-tokenization.'
+                }
+            },
+            current_policy_mutation: null
+        };
+
+        // UI audio synthesizer pointer
+        let audioCtx = null;
+        let alarmInterval = null;
+
+        // Dynamic System Terminal Logs Appender
+        function appendLog(message) {
+            const timeStr = new Date().toLocaleTimeString();
+            state.logs.unshift(`[${timeStr}] ${message}`);
+            if (state.logs.length > 20) state.logs.pop();
+
+            const feedEl = document.getElementById('terminal-ticker-feed');
+            feedEl.innerHTML = '';
+            
+            // Render top 3 logs
+            state.logs.slice(0, 3).forEach((log, idx) => {
+                const p = document.createElement('p');
+                let colorClass = "text-cyber-textMuted";
+                if (log.includes("WARNING") || log.includes("failed")) colorClass = "text-cyber-amberNeon font-bold";
+                if (log.includes("SUCCESS") || log.includes("Verified")) colorClass = "text-cyber-nominal font-bold";
+                if (log.includes("MUTATION") || log.includes("REVOCATION")) colorClass = "text-cyber-anomaly font-bold animate-pulse";
+                
+                p.className = `${colorClass} transition-colors duration-200`;
+                p.innerHTML = log;
+                feedEl.appendChild(p);
+            });
+        }
+
+        // Web Audio Synthesizer Alarm Sirens
+        function playWarningDrone() {
+            if (state.audio_muted) return;
+            try {
+                if (!audioCtx) {
+                    audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                }
+                if (audioCtx.state === 'suspended') {
+                    audioCtx.resume();
+                }
+
+                const osc1 = audioCtx.createOscillator();
+                const osc2 = audioCtx.createOscillator();
+                const gain = audioCtx.createGain();
+
+                osc1.type = 'sine';
+                osc1.frequency.setValueAtTime(220, audioCtx.currentTime); // low harmonic alarm drone
+
+                osc2.type = 'sawtooth';
+                osc2.frequency.setValueAtTime(223, audioCtx.currentTime); // beating frequency mismatch
+
+                gain.gain.setValueAtTime(0.08, audioCtx.currentTime);
+                gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.8);
+
+                osc1.connect(gain);
+                osc2.connect(gain);
+                gain.connect(audioCtx.destination);
+
+                osc1.start();
+                osc2.start();
+                osc1.stop(audioCtx.currentTime + 0.85);
+                osc2.stop(audioCtx.currentTime + 0.85);
+            } catch (e) {
+                console.warn("Audio Context block protection", e);
+            }
+        }
+
+        function toggleAudioMute() {
+            state.audio_muted = !state.audio_muted;
+            const btn = document.getElementById('alarm-toggle-btn');
+            const icon = document.getElementById('alarm-icon');
+
+            if (state.audio_muted) {
+                btn.className = "p-1.5 rounded bg-cyber-bg border border-cyber-border text-cyber-textMuted hover:text-white transition-colors";
+                icon.className = "ph ph-speaker-slash text-base";
+                clearInterval(alarmInterval);
+                appendLog("AUDIO SYST: Warning alarm alerts and sirens muted by operator command.");
+            } else {
+                btn.className = "p-1.5 rounded bg-amber-500/10 border border-amber-500/30 text-cyber-amberNeon hover:text-amber-400 transition-colors";
+                icon.className = "ph ph-speaker-high text-base animate-bounce";
+                
+                // Trigger sirens immediately, repeat on interval if compliance anomalies remain
+                playWarningDrone();
+                alarmInterval = setInterval(() => {
+                    if (state.selected_node === 'GW_QUARANTINED') {
+                        playWarningDrone();
+                    }
+                }, 1600);
+                appendLog("AUDIO SYST: Alarm warning tone generators enabled. Active warnings will emit sirens.");
+            }
+        }
+
+        // Keycloak security role clearance level swapper simulations
+        function shiftClearance(levelVal) {
+            state.clearance_level = levelVal;
+            appendLog(`IDENTITY SESSION: Privilege context changed to ${levelVal}.`);
+
+            const killswitchBtn = document.getElementById('master-kill-btn');
+            const inspectBadge = document.getElementById('inspect-compliance-badge');
+
+            if (levelVal === 'LEVEL_1_OPERATOR') {
+                killswitchBtn.disabled = true;
+                killswitchBtn.className = "bg-gray-800 text-gray-500 border border-cyber-border text-[10px] font-bold px-3 py-1.5 rounded cursor-not-allowed opacity-40";
+                appendLog("IDENTITY MASKING: Read-Only mode active. Secure modifications and global override buttons disabled.");
+            } else {
+                killswitchBtn.disabled = false;
+                killswitchBtn.className = "bg-cyber-anomaly/10 hover:bg-cyber-anomaly/25 border border-cyber-anomaly text-cyber-anomaly text-[10px] font-bold px-3 py-1.5 rounded transition-all";
+                appendLog("IDENTITY MASKING: Write authorizations restored. Administrator override tools unlocked.");
+            }
+        }
+
+        // Node Inspector Detail Panel loader
+        function inspectNode(nodeKey) {
+            const data = state.nodes[nodeKey];
+            if (!data) return;
+
+            state.selected_node = nodeKey;
+
+            document.getElementById('inspect-node-id').innerText = data.id;
+            document.getElementById('inspect-node-location').innerText = data.location;
+            
+            const badge = document.getElementById('inspect-compliance-badge');
+            badge.innerText = data.status_badge;
+
+            // Visual styling adjustments matching compliance
+            if (data.status_badge === 'CERTIFICATE_EXPIRED') {
+                badge.className = "text-[8px] bg-amber-500/15 border border-amber-500/30 text-cyber-amberNeon font-bold px-1.5 py-0.5 rounded font-mono uppercase";
+                document.getElementById('inspect-quarantine-status').className = "text-cyber-amberNeon font-bold flex items-center gap-1 animate-pulse";
+                document.getElementById('inspect-quarantine-status').innerHTML = "<i class='ph ph-keyhole'></i> ACTIVE_ISOLATION";
+            } else {
+                badge.className = "text-[8px] bg-emerald-500/15 border border-emerald-500/30 text-cyber-nominal font-bold px-1.5 py-0.5 rounded font-mono uppercase";
+                document.getElementById('inspect-quarantine-status').className = "text-cyber-nominal font-bold flex items-center gap-1";
+                document.getElementById('inspect-quarantine-status').innerHTML = "<i class='ph ph-check-square'></i> TRUSTED_BYPASS";
+            }
+
+            appendLog(`TOPOLOGY FOCUS: Shifted inspector parameters to ${data.id}.`);
+            
+            // Trigger dynamic admin prompts if operator clicks quarantined node to bypass it
+            if (nodeKey === 'GW_QUARANTINED' && state.clearance_level === 'LEVEL_3_SUPERVISOR') {
+                deployDualAuthModal({
+                    id: "POL-7421",
+                    device: "GW-EDGE-DESAL-04",
+                    action: "FORCE_TRUST_BYPASS_MTLS_CERT"
+                });
+            }
+        }
+
+        // Secure Modals Dispatch Gatekeepers
+        function deployDualAuthModal(mutationPayload) {
+            state.current_policy_mutation = mutationPayload;
+
+            document.getElementById('modal-policy-id').innerText = mutationPayload.id;
+            document.getElementById('modal-policy-device').innerText = mutationPayload.device;
+            document.getElementById('modal-policy-action').innerText = mutationPayload.action;
+
+            document.getElementById('admin-token-1').value = '';
+            document.getElementById('admin-token-2').value = '';
+            document.getElementById('modal-auth-error').classList.add('hidden');
+
+            document.getElementById('dual-auth-modal').classList.remove('hidden');
+        }
+
+        function closeSecureModal() {
+            state.current_policy_mutation = null;
+            document.getElementById('dual-auth-modal').classList.add('hidden');
+        }
+
+        function executeAuthorizedPolicy() {
+            const token1 = document.getElementById('admin-token-1').value;
+            const token2 = document.getElementById('admin-token-2').value;
+            const errEl = document.getElementById('modal-auth-error');
+
+            if (token1 === '1111' && token2 === '2222') {
+                const target = state.current_policy_mutation;
+                
+                // Clear quarantined warning state visually
+                if (target.device === "GW-EDGE-DESAL-04") {
+                    state.nodes['GW_QUARANTINED'].status_badge = 'VERIFIED_BYPASS_BY_ADMIN';
+                    document.getElementById('quarantined-link').setAttribute('stroke', '#10B981');
+                    document.getElementById('quarantined-link').setAttribute('stroke-dasharray', '0');
+                    document.getElementById('quarantine-node').querySelector('.stroke-cyber-amberNeon').className.baseVal = "stroke-cyber-nominal fill-transparent";
+                    
+                    // Update index rates
+                    document.getElementById('active-session-count').innerText = "1,421 Active";
+                    
+                    inspectNode('GW_QUARANTINED');
+                }
+
+                closeSecureModal();
+                appendLog(`MUTATION SUCCESS: Cryptographic bypass authorized. Security policy mutation verified and injected.`);
+            } else {
+                errEl.innerText = "AUTHENTICATION ERROR: Dual signature validation failed. Signatures mismatched.";
+                errEl.classList.remove('hidden');
+                appendLog("SECURITY BREACH ALERT: Unauthorized attempt to bypass mTLS certificate policy rejected.");
+            }
+        }
+
+        // Global master session revocation killswitch
+        function initiateKillswitch() {
+            if (state.clearance_level === 'LEVEL_1_OPERATOR') return;
+
+            deployDualAuthModal({
+                id: "REVOKE-OIDC-99",
+                device: "ALL_UNVERIFIED_CLIENTS",
+                action: "EMERGENCY_GLOBAL_TOKEN_REVOCATION"
+            });
+        }
+
+        // <!-- /* STREAMING_CHUNK:Rendering ChartJS components... */ -->
+        // Initialize visual analytics rendering loops
+        window.onload = function() {
+            
+            // Chart 1: Keycloak Session distribution circular ring
+            const ctxRBAC = document.getElementById('rbacDistributionChart').getContext('2d');
+            new Chart(ctxRBAC, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Admin', 'Operator', 'Technician', 'Citizen'],
+                    datasets: [{
+                        data: [3, 12, 45, 1360],
+                        backgroundColor: ['#F59E0B', '#00E5FF', '#10B981', '#4C566A'],
+                        borderWidth: 0,
+                        hoverOffset: 4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    cutout: '75%'
+                }
+            });
+
+            // Chart 2: API Gateway throughput request velocity (realtime line tracking)
+            const ctxAPI = document.getElementById('apiThroughputChart').getContext('2d');
+            let timeLabels = Array.from({length: 10}, (_, i) => `${i}s ago`);
+            let defaultTraffic = [380, 400, 395, 412, 430, 422, 412.5, 405, 420, 415];
+
+            const trafficChart = new Chart(ctxAPI, {
+                type: 'line',
+                data: {
+                    labels: timeLabels.reverse(),
+                    datasets: [{
+                        data: defaultTraffic,
+                        borderColor: '#00E5FF',
+                        borderWidth: 1.5,
+                        fill: false,
+                        pointRadius: 0,
+                        tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        x: { display: false },
+                        y: {
+                            min: 300,
+                            max: 500,
+                            grid: { color: '#2E3440' },
+                            ticks: { color: '#6D7480', font: { size: 8 } }
+                        }
+                    }
+                }
+            });
+
+            // Trigger log updates & mock micro-jitter events on parameters
+            setInterval(() => {
+                // Fluctuating transaction throughput metrics
+                const rawSpeed = 400 + (Math.random() - 0.5) * 40;
+                document.getElementById('throughput-val-display').innerText = `${rawSpeed.toFixed(1)} Req/s`;
+
+                defaultTraffic.shift();
+                defaultTraffic.push(rawSpeed);
+                trafficChart.data.datasets[0].data = defaultTraffic;
+                trafficChart.update();
+            }, 3000);
+
+            setInterval(() => {
+                const logs = [
+                    "KONG GW: Dynamic rate-limiting block refreshed for IP segment 192.168.x.x.",
+                    "KEYCLOAK OIDC: Validating active session lifecycles - 0 invalid sessions purged.",
+                    "mTLS ENGINE: Recalculating public key signatures for 250 connected edge nodes.",
+                    "FIREWALL: Blocked SQL injection query pattern detected at gateway proxy filter."
+                ];
+                const rLog = logs[Math.floor(Math.random() * logs.length)];
+                appendLog(rLog);
+            }, 8000);
+
+            appendLog("ZERO-TRUST SCADA IAM CORE ONLINE: Operational system fully synchronized.");
+        };
+    </script>
+</body>
+</html>
