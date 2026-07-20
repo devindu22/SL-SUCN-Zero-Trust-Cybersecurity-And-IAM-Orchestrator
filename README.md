@@ -2,9 +2,9 @@
 
 <This system is built using Tailwind CSS, Chart.js, and Phosphor Icons, featuring dynamic Web Audio alarms, a live interactive node topology network with zero-trust compliance trackers, Keycloak RBAC distribution charts, and a dual-authorization admin validation gateway.
 
-[![Build Status](https://img.shields.io/github/actions/workflow/status/org/repo/main.yml?branch=main)](https://github.com/org/repo/actions)
-[![License](https://img.shields.io/github/license/org/repo)](LICENSE)
-[![Version](https://img.shields.io/github/v/release/org/repo)](https://github.com/org/repo/releases)
+https://sl-sucn-ztr-cyberscrty-iam-orchestrtr.netlify.app/
+
+<img width="1915" height="916" alt="Screenshot 2026-07-20 103505" src="https://github.com/user-attachments/assets/b050d245-7a19-47ac-bc8b-32ccd60418f4" />
 
 ---
 
