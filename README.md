@@ -1,6 +1,6 @@
 # SL-SUCN-Zero-Trust-Cybersecurity-And-IAM-Orchestrator
 
-<This system is built using Tailwind CSS, Chart.js, and Phosphor Icons, featuring dynamic Web Audio alarms, a live interactive node topology network with zero-trust compliance trackers, Keycloak RBAC distribution charts, and a dual-authorization admin validation gateway.
+This system is built using Tailwind CSS, Chart.js, and Phosphor Icons, featuring dynamic Web Audio alarms, a live interactive node topology network with zero-trust compliance trackers, Keycloak RBAC distribution charts, and a dual-authorization admin validation gateway.
 
 https://sl-sucn-ztr-cyberscrty-iam-orchestrtr.netlify.app/
 
